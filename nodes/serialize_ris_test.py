@@ -50,6 +50,27 @@ def test_serialize_ris_maps_entry_type_and_von_particle():
     assert "AU  - van Beethoven, Ludwig" in result.data
 
 
+def test_serialize_ris_publisher_precedence_when_multiple_set():
+    # Regression: publisher/school/institution/organization all target
+    # RIS's single PB tag. publisher must win when more than one is set,
+    # not whichever key iterates last.
+    ax = FakeAxiomContext()
+    doc = CitationDocument(entries=[
+        CitationEntry(
+            entry_type="techreport", cite_key="t1",
+            authors=[PersonName(last="Doe", first="Jane")],
+            fields={"publisher": "RealPublisher", "school": "MIT",
+                    "organization": "ACM", "institution": "Stanford"},
+        )
+    ])
+    result = serialize_ris(ax, doc)
+    assert result.error == ""
+    assert "PB  - RealPublisher" in result.data
+    assert "MIT" not in result.data
+    assert "ACM" not in result.data
+    assert "Stanford" not in result.data
+
+
 def test_serialize_ris_round_trips_through_parse_ris():
     from gen.messages_pb2 import RisText
     from nodes.parse_ris import parse_ris

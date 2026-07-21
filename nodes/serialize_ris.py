@@ -26,7 +26,18 @@ def serialize_ris(ax: AxiomContext, input: CitationDocument) -> TextResult:
             if e.editors:
                 r["secondary_authors"] = [join_person_name_ris(n.von, n.last, n.first, n.jr) for n in e.editors]
             fields = e.fields
+            # publisher/school/institution/organization all target RIS's
+            # single PB tag; take the first non-empty in that precedence
+            # order (mirrors RISPY_TO_FIELD's "publisher wins" on parse)
+            # instead of letting dict iteration order silently overwrite.
+            for canon_key in ("publisher", "school", "institution", "organization"):
+                v = fields.get(canon_key)
+                if v:
+                    r["publisher"] = v
+                    break
             for canon_key, rispy_key in FIELD_TO_RISPY.items():
+                if canon_key in ("publisher", "school", "institution", "organization"):
+                    continue
                 v = fields.get(canon_key)
                 if v:
                     r[rispy_key] = v
