@@ -1,0 +1,5 @@
+# Add your Python runtime dependencies here, one per line.
+bibtexparser==1.4.4
+rispy==0.10.0
+pyparsing==3.3.2
+

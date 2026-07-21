@@ -1,0 +1,177 @@
+// This file defines the data contracts (messages) for your Axiom package.
+// Every node's --input and --output refers to a message defined here.
+//
+// Run `axiom create message <Name>` to scaffold a new message below.
+// Run `axiom generate` to compile these definitions into language bindings in gen/.
+//
+// DOCUMENTATION
+//   Comments written directly above a message or field declaration are extracted
+//   automatically at publish time and shown in the Axiom registry as documentation.
+//   Write your descriptions there — no separate doc files needed.
+//
+//   Leading comment  (no blank line before the declaration) → registry description ✓
+//   Detached comment (blank line before the declaration)    → ignored by registry  ✗
+//
+// This file is yours to edit. Axiom only appends new message blocks — it never
+// overwrites or removes content you have written.
+
+syntax = "proto3";
+
+package christiangeorgelucas.citation_tools;
+
+// A single structured personal name, split per BibTeX's name grammar
+// ("von Last, First" / "von Last, Jr, First" / "First von Last") into its
+// von/last/first/jr parts.
+message PersonName {
+  // Original, unmodified name string as it appeared in the source document.
+  string raw = 1;
+  // Non-dropping name particle(s) that sort with the last name, e.g. "van", "de", "von".
+  string von = 2;
+  // Family/last name; a multi-word last name is space-joined (e.g. "La Fontaine").
+  string last = 3;
+  // Given/first name(s), space-joined when there is more than one.
+  string first = 4;
+  // Generational suffix (e.g. "Jr", "III"); empty when absent.
+  string jr = 5;
+}
+
+// One bibliographic reference, normalized from either BibTeX or RIS into the
+// single canonical shape every node in this package reads and/or writes.
+message CitationEntry {
+  // Normalized entry type, lowercase BibTeX vocabulary: article, book,
+  // inbook, incollection, inproceedings, proceedings, techreport,
+  // mastersthesis, phdthesis, manual, booklet, unpublished, online, misc.
+  string entry_type = 1;
+  // BibTeX cite key. For RIS input with no usable ID tag, a stable key is
+  // synthesized from the first author's last name + year (+ a/b/c on collision).
+  string cite_key = 2;
+  // Structured authors, in document order.
+  repeated PersonName authors = 3;
+  // Structured editors, in document order.
+  repeated PersonName editors = 4;
+  // Every other field — title, journal, booktitle, year, month, volume,
+  // number, pages, doi, publisher, address, isbn, issn, url, note, abstract,
+  // series, edition, chapter, institution, organization, school,
+  // howpublished, keywords, language, type — keyed by lowercase BibTeX
+  // field name, value as plain text (BibTeX brace-protection on the whole
+  // field is stripped; braces inside the value are left as authored).
+  map<string, string> fields = 5;
+}
+
+// A parsed collection of citation entries — the canonical envelope most
+// nodes in this package consume and/or produce.
+message CitationDocument {
+  repeated CitationEntry entries = 1;
+}
+
+// Raw BibTeX source text. Bounded to 5 MB / 20000 entries before parsing.
+message BibtexText {
+  string data = 1;
+}
+
+// Raw RIS source text. Bounded to 5 MB / 20000 entries before parsing.
+message RisText {
+  string data = 1;
+}
+
+// A single non-fatal parse warning, with a best-effort source line.
+message ParseWarning {
+  string message = 1;
+  int32 line = 2;
+  string entry_key = 3;
+}
+
+// Result of parsing a BibTeX or RIS document.
+message ParseResult {
+  CitationDocument document = 1;
+  repeated ParseWarning warnings = 2;
+  // Non-empty only when the input was too malformed/oversized to process at all.
+  string error = 3;
+}
+
+// A rendered document (BibTeX or RIS text), or an error if rendering failed.
+message TextResult {
+  string data = 1;
+  string error = 2;
+}
+
+// Filter entries in an already-parsed document down to one normalized entry_type.
+message EntryTypeFilter {
+  CitationDocument document = 1;
+  // Lowercase BibTeX entry type to keep, e.g. "article", "inproceedings".
+  string entry_type = 2;
+}
+
+// Request to pull one field's value across every entry in a document.
+message FieldExtractRequest {
+  CitationDocument document = 1;
+  // A fields{} key (e.g. "doi", "year", "journal"), or "author"/"editor" to
+  // pull rendered "Last, First" names instead.
+  string field_name = 2;
+}
+
+message FieldValue {
+  string cite_key = 1;
+  string value = 2;
+}
+
+// Every (cite_key, value) pair that had the requested field set; entries
+// missing the field are omitted, not reported as an empty value.
+message FieldExtractResult {
+  repeated FieldValue values = 1;
+}
+
+// Raw author/editor field text to split per BibTeX name grammar, independent
+// of a full document parse, e.g. "von Beethoven, Ludwig and Gates, Bill".
+message AuthorFieldText {
+  string raw = 1;
+}
+
+message AuthorNameList {
+  repeated PersonName authors = 1;
+  string error = 2;
+}
+
+message CountResult {
+  int32 total = 1;
+  map<string, int32> by_type = 2;
+}
+
+// Validate a BibTeX or RIS document's syntax without producing a full parse.
+message ValidateRequest {
+  string data = 1;
+  // "bibtex", "ris", or "auto" (default) to detect the format first.
+  string format = 2;
+}
+
+message ValidationError {
+  string message = 1;
+  // 1-based source line, or 0 when a line cannot be attributed.
+  int32 line = 2;
+  string entry_key = 3;
+}
+
+message ValidationResult {
+  bool valid = 1;
+  repeated ValidationError errors = 2;
+  int32 entry_count = 3;
+  // The format actually validated against: "bibtex" or "ris".
+  string detected_format = 4;
+}
+
+message RawText {
+  string data = 1;
+}
+
+message FormatResult {
+  // "bibtex", "ris", or "unknown".
+  string format = 1;
+  // Heuristic confidence in [0, 1].
+  double confidence = 2;
+  // Non-empty only when the input could not be inspected at all (e.g. oversized).
+  string error = 3;
+}
+
+message CiteKeyList {
+  repeated string cite_keys = 1;
+}

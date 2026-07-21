@@ -1,0 +1,61 @@
+name: christiangeorgelucas/citation-tools
+version: 0.1.0
+language: python
+description: Deterministic parsing, serialization, format-conversion, and field-extraction for BibTeX and RIS bibliographic citations, wrapping the MIT-licensed rispy engine and bibtexparser (dual BSD-3-Clause/LGPLv3 — this package elects the permissive BSD-3-Clause option; see LICENSE-NOTICE.md). A single canonical CitationDocument/CitationEntry envelope with structured PersonName parts (von/last/first/jr per BibTeX's name grammar) flows through parsing, both-direction BibTeX<->RIS conversion, per-type and per-field extraction, cite-key listing, counting, canonicalization, and structural validation with source-line error locations. Stateless, offline (no DOI/network lookups), no wall-clock or randomness, with hard size/entry bounds on untrusted input and structured errors instead of crashes.
+nodes:
+    - name: ParseBibtex
+      input: BibtexText
+      output: ParseResult
+      description: Parse a BibTeX document into the package's canonical CitationDocument — one CitationEntry per @-entry, entry_type normalized to lowercase, the cite key preserved as authored, author/editor fields split into structured PersonName parts (von/last/first/jr) per BibTeX's name grammar, and every remaining field lowercased into fields{}. @string macros are resolved as plain text substitution and @preamble is ignored — neither is ever evaluated as code. Bounded to 5 MB / 20000 entries; entries the underlying parser could not fully recover from unbalanced braces surface as warnings rather than silently vanishing. Malformed or oversized input returns a structured error instead of crashing.
+    - name: SerializeBibtex
+      input: CitationDocument
+      output: TextResult
+      description: Render a CitationDocument back into BibTeX text — one @-entry per CitationEntry, author/editor PersonName parts rejoined into "von Last, Jr, First" form, and fields emitted in a fixed canonical order so the same document always serializes identically. Entries beyond the 20000-entry cap are dropped.
+    - name: ParseRis
+      input: RisText
+      output: ParseResult
+      description: Parse an RIS document into the package's canonical CitationDocument. Each TY/ER record becomes one CitationEntry — the RIS type-of-reference code mapped to the nearest lowercase BibTeX entry type, AU/A2 name lists split into structured PersonName parts, SP/EP combined into a BibTeX-style "start--end" pages field. RIS has no native cite key, so one is synthesized from an ID/AN/LB tag if present, otherwise from the first author's last name plus year, disambiguated on collision. Bounded to 5 MB / 20000 records; malformed or oversized input returns a structured error instead of crashing.
+    - name: SerializeRis
+      input: CitationDocument
+      output: TextResult
+      description: Render a CitationDocument back into RIS text — one TY/ER record per CitationEntry, entry_type mapped to the nearest RIS type-of-reference code, PersonName authors/editors rejoined into "Last, First" RIS form, and a "start--end" pages field split back into SP/EP. Deterministic for a given document; entries beyond the 20000-entry cap are dropped.
+    - name: ConvertBibtexToRis
+      input: BibtexText
+      output: TextResult
+      description: Convert a BibTeX document straight to RIS text by parsing and re-serializing through the package's canonical envelope. Best-effort, not lossless — entry types and fields map to their nearest RIS counterpart; fields with no RIS counterpart are dropped. Malformed or oversized input returns a structured error instead of crashing.
+    - name: ConvertRisToBibtex
+      input: RisText
+      output: TextResult
+      description: Convert an RIS document straight to BibTeX text by parsing (including cite-key synthesis) and re-serializing through the package's canonical envelope. Best-effort, not lossless — RIS tags map to their nearest BibTeX counterpart; tags with no BibTeX counterpart are dropped. Malformed or oversized input returns a structured error instead of crashing.
+    - name: ExtractEntriesByType
+      input: EntryTypeFilter
+      output: CitationDocument
+      description: Filter an already-parsed CitationDocument down to entries whose normalized entry_type matches the requested type (e.g. "article", "inproceedings"), case-insensitively. An unrecognized or unmatched type yields an empty document, not an error.
+    - name: ExtractField
+      input: FieldExtractRequest
+      output: FieldExtractResult
+      description: Pull one field's value across every entry in a document — every DOI, every year, every journal. field_name is a fields{} key, or the special names "author"/"editor" which render each entry's structured names back to "Last, First" text, semicolon-joined for multi-author entries. Entries missing the field are omitted from the result rather than reported with an empty value.
+    - name: ParseAuthorField
+      input: AuthorFieldText
+      output: AuthorNameList
+      description: Split a raw BibTeX author/editor field string into structured names per BibTeX's name grammar, independent of a full document parse — handles "von Last, First", "Last, Jr, First", and plain "First von Last" forms, with multiple names joined by " and ". Bounded to 20000 bytes; oversized input returns a structured error instead of crashing.
+    - name: CountEntries
+      input: CitationDocument
+      output: CountResult
+      description: Count the entries in a document, total and broken down by normalized entry_type.
+    - name: ValidateDocument
+      input: ValidateRequest
+      output: ValidationResult
+      description: Validate a BibTeX or RIS document's syntax and report every problem found with a best-effort source line — unbalanced braces and unrecoverable entries for BibTeX, mismatched TY/ER pairs for RIS, duplicate cite keys for either. format selects "bibtex", "ris", or "auto" (default) to detect the format first. Oversized input is reported as a single validation error rather than raising. A document with zero problems and entry_count 0 is valid but empty, not an error.
+    - name: DetectFormat
+      input: RawText
+      output: FormatResult
+      description: Guess whether raw text is a BibTeX or RIS document by structural signal — RIS's "TY  -"/"ER  -" tag lines vs BibTeX's "@type{" entry headers — returning "bibtex", "ris", or "unknown" with a heuristic confidence in [0, 1]. Bounded to 5 MB; oversized input is rejected with a structured error.
+    - name: NormalizeDocument
+      input: CitationDocument
+      output: CitationDocument
+      description: Canonicalize a parsed document for stable, comparable output — entry_type lowercased to the standard BibTeX vocabulary, entries reordered by cite_key, and every field/name value whitespace-trimmed.
+    - name: ExtractCiteKeys
+      input: CitationDocument
+      output: CiteKeyList
+      description: Pull every entry's cite key, in document order, including any duplicates — this reports what's there, it does not deduplicate.
