@@ -1,6 +1,6 @@
 # citation-tools
 
-Composable [Axiom](https://axiom.dev) nodes for **deterministic BibTeX and RIS
+Composable [Axiom](https://axiomide.com) nodes for **deterministic BibTeX and RIS
 citation parsing, serialization, format-conversion, and field-extraction** —
 wrapping the MIT-licensed [`rispy`](https://github.com/MrTango/rispy) engine
 and [`bibtexparser`](https://github.com/sciunto-org/python-bibtexparser)
