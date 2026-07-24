@@ -25,8 +25,8 @@ def parse_ris(ax: AxiomContext, input: RisText) -> ParseResult:
     with a direct counterpart are copied into `fields{}`. RIS has no native
     cite key, so one is synthesized from the ID/AN/LB tag if present,
     otherwise from the first author's last name + year, disambiguated on
-    collision. Bounded to 5 MB / 20000 records; malformed or oversized
-    input returns a structured error rather than crashing.
+    collision. Malformed input returns a structured error rather than
+    crashing.
     """
     def run():
         entries, raw_warnings = parse_ris_text(input.data)

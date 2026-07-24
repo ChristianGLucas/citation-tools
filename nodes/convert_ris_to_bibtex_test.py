@@ -23,8 +23,11 @@ def test_convert_ris_to_bibtex_exact_output():
     assert result.data == expected
 
 
-def test_convert_ris_to_bibtex_oversized_input_returns_structured_error():
+def test_convert_ris_to_bibtex_large_input_does_not_crash():
     ax = FakeAxiomContext()
     huge = "TY  - JOUR\nTI  - " + ("a" * (6 * 1024 * 1024)) + "\nER  -\n"
     result = convert_ris_to_bibtex(ax, RisText(data=huge))
-    assert result.error != ""
+    # Well-formed single record -> converts cleanly even at multi-MB size;
+    # no payload size limit is imposed by this node.
+    assert result.error == ""
+    assert result.data.startswith("@article{")

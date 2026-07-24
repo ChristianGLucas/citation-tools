@@ -107,9 +107,11 @@ def test_parse_bibtex_recovers_good_entries_around_a_malformed_one():
     assert any("bad2" in w.entry_key or "bad2" in w.message for w in result.warnings)
 
 
-def test_parse_bibtex_oversized_input_returns_structured_error():
+def test_parse_bibtex_large_input_does_not_crash():
     ax = FakeAxiomContext()
     huge = "@misc{x, title={" + ("a" * (6 * 1024 * 1024)) + "}}"
     result = parse_bibtex(ax, BibtexText(data=huge))
-    assert result.error != ""
-    assert len(result.document.entries) == 0
+    # Well-formed single entry -> parses cleanly even at multi-MB size; no
+    # payload size limit is imposed by this node.
+    assert result.error == ""
+    assert len(result.document.entries) == 1

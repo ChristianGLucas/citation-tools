@@ -64,12 +64,12 @@ message CitationDocument {
   repeated CitationEntry entries = 1;
 }
 
-// Raw BibTeX source text. Bounded to 5 MB / 20000 entries before parsing.
+// Raw BibTeX source text.
 message BibtexText {
   string data = 1;
 }
 
-// Raw RIS source text. Bounded to 5 MB / 20000 entries before parsing.
+// Raw RIS source text.
 message RisText {
   string data = 1;
 }

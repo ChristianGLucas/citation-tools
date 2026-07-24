@@ -26,8 +26,11 @@ def test_detect_format_unknown_for_plain_text():
     assert result.confidence == 0.0
 
 
-def test_detect_format_oversized_returns_error():
+def test_detect_format_large_input_does_not_crash():
     ax = FakeAxiomContext()
     huge = "@misc{x," + ("a" * (6 * 1024 * 1024))
     result = detect_format(ax, RawText(data=huge))
-    assert result.error != ""
+    # No payload size limit is imposed by this node; a well-formed entry
+    # header is still detected as bibtex even at multi-MB size.
+    assert result.error == ""
+    assert result.format == "bibtex"

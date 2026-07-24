@@ -26,8 +26,12 @@ def test_convert_bibtex_to_ris_exact_output():
     assert result.data == expected
 
 
-def test_convert_bibtex_to_ris_malformed_bibtex_yields_structured_error_or_empty():
+def test_convert_bibtex_to_ris_large_input_does_not_crash():
     ax = FakeAxiomContext()
     huge = "@misc{x, title={" + ("a" * (6 * 1024 * 1024)) + "}}"
     result = convert_bibtex_to_ris(ax, BibtexText(data=huge))
-    assert result.error != ""
+    assert isinstance(result, TextResult)
+    # Well-formed single entry -> converts cleanly even at multi-MB size;
+    # no payload size limit is imposed by this node.
+    assert result.error == ""
+    assert "TY  - GEN" in result.data

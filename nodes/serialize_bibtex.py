@@ -4,7 +4,7 @@ from bibtexparser.bibdatabase import BibDatabase
 
 from gen.messages_pb2 import CitationDocument, TextResult
 from gen.axiom_context import AxiomContext
-from nodes._citation import join_person_name, normalize_entry_type, safe, MAX_ENTRIES
+from nodes._citation import join_person_name, normalize_entry_type, safe
 
 # Fixed, canonical field order — every serialize call produces the same
 # ordering for the same content (a same-input round trip is byte-identical).
@@ -30,12 +30,11 @@ def serialize_bibtex(ax: AxiomContext, input: CitationDocument) -> TextResult:
     fields{} entry emitted with a fixed canonical field order (common fields
     first in a stable sequence, then any remaining fields sorted
     alphabetically) so the same document always serializes identically.
-    Entries beyond the 20000-entry cap are dropped.
     """
     def run():
         db = BibDatabase()
         raw_entries = []
-        for e in input.entries[:MAX_ENTRIES]:
+        for e in input.entries:
             d = {"ENTRYTYPE": normalize_entry_type(e.entry_type), "ID": e.cite_key or "entry"}
             if e.authors:
                 d["author"] = _names_str(e.authors)

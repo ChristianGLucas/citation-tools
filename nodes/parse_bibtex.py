@@ -21,10 +21,10 @@ def parse_bibtex(ax: AxiomContext, input: BibtexText) -> ParseResult:
     the cite key preserved as authored, author/editor fields split into
     structured PersonName parts (von/last/first/jr), and every remaining
     field lowercased into `fields{}`. `@string` macros are resolved as plain
-    text substitution; `@preamble` is ignored (never evaluated). Bounded to
-    5 MB / 20000 entries; entries the parser could not fully recover from
-    unbalanced braces surface as warnings, not silent loss. Malformed or
-    oversized input returns a structured error rather than crashing.
+    text substitution; `@preamble` is ignored (never evaluated). Entries the
+    parser could not fully recover from unbalanced braces surface as
+    warnings, not silent loss. Malformed input returns a structured error
+    rather than crashing.
     """
     def run():
         entries, raw_warnings = parse_bibtex_text(input.data)

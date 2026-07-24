@@ -1,5 +1,5 @@
 name: christiangeorgelucas/citation-tools
-version: 0.1.0
+version: 0.1.1
 language: python
 description: Deterministic parsing, serialization, format-conversion, and field-extraction for BibTeX and RIS bibliographic citations, wrapping the MIT-licensed rispy engine and bibtexparser (dual BSD-3-Clause/LGPLv3 — this package elects the permissive BSD-3-Clause option; see LICENSE-NOTICE.md). A single canonical CitationDocument/CitationEntry envelope with structured PersonName parts (von/last/first/jr per BibTeX's name grammar) flows through parsing, both-direction BibTeX<->RIS conversion, per-type and per-field extraction, cite-key listing, counting, canonicalization, and structural validation with source-line error locations. Stateless, offline (no DOI/network lookups), no wall-clock or randomness, with hard size/entry bounds on untrusted input and structured errors instead of crashes.
 nodes:

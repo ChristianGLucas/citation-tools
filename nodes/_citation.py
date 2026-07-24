@@ -7,11 +7,10 @@ permissive BSD-3-Clause option, see LICENSE-NOTICE.md) for BibTeX and `rispy`
 inert string; nothing here calls eval/exec on document content.
 
 Untrusted-input discipline (this package parses caller-supplied text):
-  * `check_bounds` caps RAW text at MAX_TEXT_BYTES and, once parsed, every
-    entry-producing path caps at MAX_ENTRIES — both enforced before/while
-    building output, never after materializing an unbounded collection.
   * `safe()` converts any parser blow-up (including RecursionError/MemoryError
     from a hostile document) into a structured error instead of a crash.
+    Payload size and result-count limits are the platform's job, not this
+    package's — no request/response size guard lives here.
   * Field values are returned as authored (BibTeX's own outer-brace stripping
     only); no code path interprets a field value as executable.
 """
@@ -23,12 +22,6 @@ from bibtexparser.bparser import BibTexParser
 from bibtexparser.bwriter import BibTexWriter
 from bibtexparser.bibdatabase import BibDatabase
 from bibtexparser.customization import splitname
-
-# Hard cost bounds on untrusted input, enforced before parsing.
-MAX_TEXT_BYTES = 5 * 1024 * 1024      # 5 MB of raw source text
-MAX_ENTRIES = 20_000                  # entries processed per document
-MAX_NAME_TEXT = 20_000                # bytes for a standalone author-field string
-MAX_FIELD_VALUE = 100_000             # bytes for any single field value kept
 
 BIBTEX_TYPES = {
     "article", "book", "inbook", "incollection", "inproceedings", "conference",
@@ -110,14 +103,10 @@ RISPY_TO_FIELD = {v: k for k, v in FIELD_TO_RISPY.items() if k not in
 
 
 def check_text_bounds(data):
-    """Raise ValueError if raw text exceeds the byte cap; return it unchanged."""
+    """Normalizes None to "". No size limit — payload size is the
+    platform's job, not this node's."""
     if data is None:
         data = ""
-    raw = data.encode("utf-8", errors="replace")
-    if len(raw) > MAX_TEXT_BYTES:
-        raise ValueError(
-            f"input exceeds size limit: {len(raw)} bytes > {MAX_TEXT_BYTES} byte cap"
-        )
     return data
 
 
@@ -155,17 +144,11 @@ def split_person_name(raw):
 
 def split_name_list(raw):
     """Split an " and "-joined BibTeX author/editor field into a list of
-    (raw_piece, von, last, first, jr) tuples. Bounded to MAX_NAME_TEXT bytes
-    and a sane number of names.
+    (raw_piece, von, last, first, jr) tuples.
     """
     if raw is None:
         raw = ""
-    if len(raw.encode("utf-8", errors="replace")) > MAX_NAME_TEXT:
-        raise ValueError(
-            f"author/editor field exceeds size limit ({MAX_NAME_TEXT} bytes)"
-        )
     pieces = [p.strip() for p in re.split(r"\s+\band\b\s+", raw.strip(), flags=re.I) if p.strip()]
-    pieces = pieces[:MAX_ENTRIES]
     out = []
     for piece in pieces:
         von, last, first, jr = split_person_name(piece)
@@ -197,8 +180,7 @@ def parse_bibtex_text(data):
     parser.customization = None
     parser.ignore_nonstandard_types = False
     db = bibtexparser.loads(data, parser=parser)
-    entries = db.entries[:MAX_ENTRIES]
-    truncated = len(db.entries) > MAX_ENTRIES
+    entries = db.entries
 
     # Cross-check declared "@type{key," headers against what the parser
     # actually returned, to surface entries it silently dropped/recovered
@@ -218,9 +200,6 @@ def parse_bibtex_text(data):
             warnings.append((f"entry '{key}' was declared but could not be fully parsed "
                               "(likely unbalanced braces or an unterminated value)",
                               line, key))
-    if truncated:
-        warnings.append((f"document has more than {MAX_ENTRIES} entries; extra entries were dropped",
-                          0, ""))
     return entries, warnings
 
 
@@ -230,14 +209,11 @@ def normalize_entry_type(raw):
 
 
 def field_value(v):
-    """Truncate an individual field value to MAX_FIELD_VALUE bytes."""
+    """Stringify a raw field value (no length limit — the platform bounds
+    payload size, not this node)."""
     if v is None:
         return ""
-    v = str(v)
-    b = v.encode("utf-8", errors="replace")
-    if len(b) > MAX_FIELD_VALUE:
-        return b[:MAX_FIELD_VALUE].decode("utf-8", errors="ignore")
-    return v
+    return str(v)
 
 
 RESERVED_BIBTEX_KEYS = {"ENTRYTYPE", "ID", "author", "editor"}
@@ -263,19 +239,14 @@ def parse_ris_text(data):
     """
     data = check_text_bounds(data)
     entries = rispy.loads(data, skip_unknown_tags=False)
-    truncated = len(entries) > MAX_ENTRIES
-    entries = entries[:MAX_ENTRIES]
 
     ty_count = len(re.findall(r"^TY\s{0,2}-", data, re.M))
     warnings = []
-    if ty_count > len(entries) and not truncated:
+    if ty_count > len(entries):
         warnings.append((
             f"document declares {ty_count} TY records but only {len(entries)} parsed "
             "cleanly (likely a missing/misplaced ER tag)", 0, "",
         ))
-    if truncated:
-        warnings.append((f"document has more than {MAX_ENTRIES} entries; extra entries were dropped",
-                          0, ""))
     return entries, warnings
 
 

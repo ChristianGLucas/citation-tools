@@ -11,19 +11,11 @@ def validate_document(ax: AxiomContext, input: ValidateRequest) -> ValidationRes
     parser could not fully recover for BibTeX; mismatched TY/ER pairs for
     RIS; duplicate cite keys for either. format selects "bibtex", "ris", or
     "auto" (default) to detect the format first via DetectFormat's
-    heuristic. Oversized input (over the 5 MB cap) is reported as a single
-    validation error rather than raising. A document with zero problems and
-    entry_count 0 is valid but empty, not an error.
+    heuristic. A document with zero problems and entry_count 0 is valid but
+    empty, not an error.
     """
     fmt = (input.format or "auto").strip().lower()
-    try:
-        data = check_text_bounds(input.data)
-    except ValueError as exc:
-        return ValidationResult(
-            valid=False,
-            errors=[ValidationError(message=str(exc), line=0, entry_key="")],
-            entry_count=0, detected_format=fmt if fmt in ("bibtex", "ris") else "unknown",
-        )
+    data = check_text_bounds(input.data)
 
     if fmt == "auto":
         fmt, _ = detect_format(data)

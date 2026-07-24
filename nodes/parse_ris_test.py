@@ -64,9 +64,11 @@ def test_parse_ris_synthesizes_distinct_keys_on_collision():
     assert keys[0] != keys[1]
 
 
-def test_parse_ris_oversized_input_returns_structured_error():
+def test_parse_ris_large_input_does_not_crash():
     ax = FakeAxiomContext()
     huge = "TY  - JOUR\nTI  - " + ("a" * (6 * 1024 * 1024)) + "\nER  -\n"
     result = parse_ris(ax, RisText(data=huge))
-    assert result.error != ""
-    assert len(result.document.entries) == 0
+    # Well-formed single record -> parses cleanly even at multi-MB size; no
+    # payload size limit is imposed by this node.
+    assert result.error == ""
+    assert len(result.document.entries) == 1
