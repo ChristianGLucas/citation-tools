@@ -8,9 +8,8 @@ def parse_author_field(ax: AxiomContext, input: AuthorFieldText) -> AuthorNameLi
     per BibTeX's name grammar, independent of a full document parse —
     handles "von Last, First" (e.g. "van Beethoven, Ludwig"), "Last, Jr,
     First" (e.g. "King, Jr, Martin Luther"), and plain "First von Last"
-    forms, with multiple names joined by " and ". Bounded to 20000 bytes;
-    oversized or unparseable input returns a structured error rather than
-    crashing.
+    forms, with multiple names joined by " and ". Unparseable input
+    returns a structured error rather than crashing.
     """
     def run():
         out = []

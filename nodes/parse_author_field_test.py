@@ -39,8 +39,13 @@ def test_parse_author_field_empty_yields_empty_list_not_error():
     assert list(result.authors) == []
 
 
-def test_parse_author_field_oversized_returns_structured_error():
+def test_parse_author_field_large_input_does_not_crash():
+    # No payload-length cap is imposed by this node -- the platform bounds
+    # that, not the node. A large, well-formed author list still parses
+    # cleanly (well beyond the old 20000-byte bound).
     ax = FakeAxiomContext()
-    huge = "Smith, John and " * 2_000_000
+    n = 50_000
+    huge = "Smith, John and " * n
     result = parse_author_field(ax, AuthorFieldText(raw=huge))
-    assert result.error != ""
+    assert result.error == ""
+    assert len(result.authors) >= n - 1

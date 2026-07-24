@@ -85,7 +85,7 @@ message ParseWarning {
 message ParseResult {
   CitationDocument document = 1;
   repeated ParseWarning warnings = 2;
-  // Non-empty only when the input was too malformed/oversized to process at all.
+  // Non-empty only when the input was too malformed to process at all.
   string error = 3;
 }
 
@@ -168,7 +168,7 @@ message FormatResult {
   string format = 1;
   // Heuristic confidence in [0, 1].
   double confidence = 2;
-  // Non-empty only when the input could not be inspected at all (e.g. oversized).
+  // Non-empty only when the input could not be inspected at all.
   string error = 3;
 }
 
